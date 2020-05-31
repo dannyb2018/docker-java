@@ -1,10 +1,10 @@
 package com.github.dockerjava.core.command;
 
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.exception.DockerException;
 import com.github.dockerjava.api.exception.InternalServerErrorException;
 import com.github.dockerjava.api.exception.NotFoundException;
 import com.github.dockerjava.api.model.Image;
-import com.github.dockerjava.core.command.BuildImageResultCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +35,7 @@ public class DockerfileFixture implements AutoCloseable {
         LOGGER.info("building {}", directory);
 
         client.buildImageCmd(new File("src/test/resources", directory)).withNoCache(true)
-                .exec(new BuildImageResultCallback()).awaitImageId();
+                .start().awaitImageId();
 
         Image lastCreatedImage = client.listImagesCmd().exec().get(0);
 
@@ -68,7 +68,7 @@ public class DockerfileFixture implements AutoCloseable {
             LOGGER.info("removing repository {}", repository);
             try {
                 client.removeImageCmd(repository).withForce(true).exec();
-            } catch (NotFoundException | InternalServerErrorException e) {
+            } catch (DockerException e) {
                 LOGGER.info("ignoring {}", e.getMessage());
             }
             repository = null;

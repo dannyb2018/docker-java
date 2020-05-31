@@ -58,6 +58,7 @@ import com.github.dockerjava.api.command.RemoveVolumeCmd;
 import com.github.dockerjava.api.command.RenameContainerCmd;
 import com.github.dockerjava.api.command.RestartContainerCmd;
 import com.github.dockerjava.api.command.SaveImageCmd;
+import com.github.dockerjava.api.command.SaveImagesCmd;
 import com.github.dockerjava.api.command.SearchImagesCmd;
 import com.github.dockerjava.api.command.StartContainerCmd;
 import com.github.dockerjava.api.command.StatsCmd;
@@ -133,6 +134,7 @@ import com.github.dockerjava.core.command.RemoveVolumeCmdImpl;
 import com.github.dockerjava.core.command.RenameContainerCmdImpl;
 import com.github.dockerjava.core.command.RestartContainerCmdImpl;
 import com.github.dockerjava.core.command.SaveImageCmdImpl;
+import com.github.dockerjava.core.command.SaveImagesCmdImpl;
 import com.github.dockerjava.core.command.SearchImagesCmdImpl;
 import com.github.dockerjava.core.command.StartContainerCmdImpl;
 import com.github.dockerjava.core.command.StatsCmdImpl;
@@ -146,8 +148,10 @@ import com.github.dockerjava.core.command.UpdateSwarmCmdImpl;
 import com.github.dockerjava.core.command.UpdateSwarmNodeCmdImpl;
 import com.github.dockerjava.core.command.VersionCmdImpl;
 import com.github.dockerjava.core.command.WaitContainerCmdImpl;
+import com.github.dockerjava.transport.DockerHttpClient;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -163,37 +167,70 @@ public class DockerClientImpl implements Closeable, DockerClient {
 
     private final DockerClientConfig dockerClientConfig;
 
-    private DockerCmdExecFactory dockerCmdExecFactory;
+    DockerCmdExecFactory dockerCmdExecFactory;
 
-    private DockerClientImpl() {
-        this(DefaultDockerClientConfig.createDefaultConfigBuilder().build());
-    }
-
-    private DockerClientImpl(String serverUrl) {
-        this(configWithServerUrl(serverUrl));
-    }
-
-    private DockerClientImpl(DockerClientConfig dockerClientConfig) {
+    DockerClientImpl(DockerClientConfig dockerClientConfig) {
         checkNotNull(dockerClientConfig, "config was not specified");
         this.dockerClientConfig = dockerClientConfig;
     }
 
-    private static DockerClientConfig configWithServerUrl(String serverUrl) {
-        return DefaultDockerClientConfig.createDefaultConfigBuilder().withDockerHost(serverUrl).build();
-    }
-
+    /**
+     *
+     * @deprecated use {@link #getInstance(DockerClientConfig, DockerHttpClient)}
+     */
+    @Deprecated
     public static DockerClientImpl getInstance() {
-        return new DockerClientImpl();
+        return new DockerClientImpl(DefaultDockerClientConfig.createDefaultConfigBuilder().build());
     }
 
+    /**
+     *
+     * @deprecated use {@link #getInstance(DockerClientConfig, DockerHttpClient)}
+     */
+    @Deprecated
     public static DockerClientImpl getInstance(DockerClientConfig dockerClientConfig) {
         return new DockerClientImpl(dockerClientConfig);
     }
 
-    public static DockerClientImpl getInstance(String serverUrl) {
-        return new DockerClientImpl(serverUrl);
+    public static DockerClient getInstance(DockerClientConfig dockerClientConfig, DockerHttpClient dockerHttpClient) {
+        return new DockerClientImpl(dockerClientConfig)
+            .withHttpClient(dockerHttpClient);
     }
 
+    /**
+     *
+     * @deprecated use {@link #getInstance(DockerClientConfig, DockerHttpClient)}
+     */
+    @Deprecated
+    public static DockerClientImpl getInstance(String serverUrl) {
+        return new DockerClientImpl(
+            DefaultDockerClientConfig.createDefaultConfigBuilder()
+                .withDockerHost(serverUrl)
+                .build()
+        );
+    }
+
+    DockerClientImpl withHttpClient(DockerHttpClient httpClient) {
+        return withDockerCmdExecFactory(new DefaultDockerCmdExecFactory(httpClient, dockerClientConfig.getObjectMapper()));
+    }
+
+    /**
+     *
+     * @return {@link DockerHttpClient} or null if not set
+     */
+    @Nullable
+    public DockerHttpClient getHttpClient() {
+        if (dockerCmdExecFactory instanceof DefaultDockerCmdExecFactory) {
+            return ((DefaultDockerCmdExecFactory) dockerCmdExecFactory).getDockerHttpClient();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * @deprecated use {@link #getInstance(DockerClientConfig, DockerHttpClient)}
+     */
+    @Deprecated
     public DockerClientImpl withDockerCmdExecFactory(DockerCmdExecFactory dockerCmdExecFactory) {
         checkNotNull(dockerCmdExecFactory, "dockerCmdExecFactory was not specified");
         this.dockerCmdExecFactory = dockerCmdExecFactory;
@@ -203,6 +240,7 @@ public class DockerClientImpl implements Closeable, DockerClient {
         return this;
     }
 
+    @Deprecated
     private DockerCmdExecFactory getDockerCmdExecFactory() {
         checkNotNull(dockerCmdExecFactory, "dockerCmdExecFactory was not specified");
         return dockerCmdExecFactory;
@@ -281,6 +319,11 @@ public class DockerClientImpl implements Closeable, DockerClient {
     @Override
     public SaveImageCmd saveImageCmd(String name) {
         return new SaveImageCmdImpl(getDockerCmdExecFactory().createSaveImageCmdExec(), name);
+    }
+
+    @Override
+    public SaveImagesCmd saveImagesCmd() {
+        return new SaveImagesCmdImpl(getDockerCmdExecFactory().createSaveImagesCmdExec());
     }
 
     @Override

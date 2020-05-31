@@ -70,7 +70,7 @@ public class HostConfig implements Serializable {
     @JsonProperty("MemorySwappiness")
     private Long memorySwappiness;
 
-    @JsonProperty("NanoCPUs")
+    @JsonProperty("NanoCpus")
     private Long nanoCPUs;
 
     @JsonProperty("CapAdd")
@@ -111,6 +111,12 @@ public class HostConfig implements Serializable {
 
     @JsonProperty("DeviceCgroupRules")
     private List<String> deviceCgroupRules;
+
+    /**
+     * @since {@link com.github.dockerjava.core.RemoteApiVersion#VERSION_1_40}
+     */
+    @JsonProperty("DeviceRequests")
+    private List<DeviceRequest> deviceRequests;
 
     /**
      * @since {@link RemoteApiVersion#VERSION_1_25}
@@ -1034,6 +1040,16 @@ public class HostConfig implements Serializable {
 
     public HostConfig withDeviceCgroupRules(List<String> deviceCgroupRules) {
         this.deviceCgroupRules = deviceCgroupRules;
+        return this;
+    }
+
+    @CheckForNull
+    public List<DeviceRequest> getDeviceRequests() {
+        return deviceRequests;
+    }
+
+    public HostConfig withDeviceRequests(List<DeviceRequest> deviceRequests) {
+        this.deviceRequests = deviceRequests;
         return this;
     }
 
